@@ -1,7 +1,7 @@
 """Books table
 
 Revision ID: 9fa3a8dbba9b
-Revises: 
+Revises:
 Create Date: 2026-08-26 16:12:48.114101
 
 """
