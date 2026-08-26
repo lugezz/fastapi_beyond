@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
@@ -8,6 +9,8 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 engine: AsyncEngine = create_async_engine(
     settings.database_url,
@@ -25,5 +28,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with SessionLocal() as db:
         try:
             yield db
-        finally:
-            await db.close()
+        except Exception as e:
+            await db.rollback()
+            logger.error("Database session rollback because of exception: %s", e)
+            raise e

@@ -20,7 +20,7 @@ async def get_books(
     page: int = 1,
     page_size: int = 50,
 ):
-    return await service.list_documents(db=db, search=search, page=page, page_size=page_size)
+    return await service.list_books(db=db, search=search, page=page, page_size=page_size)
 
 
 @router.get("/{book_id}", response_model=BookItem)

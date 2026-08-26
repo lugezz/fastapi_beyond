@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class BookService:
-    async def list_documents(
+    async def list_books(
         self,
         db: AsyncSession,
         search: str | None = None,
