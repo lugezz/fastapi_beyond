@@ -38,10 +38,10 @@ class Settings(BaseSettings):
         password = self.db_password or "password"
         host = self.db_host or "localhost"
         port = self.db_port or 5432
-        name = self.db_name or "litreview"
+        name = self.db_name or "bookly_db"
 
         return (
-            f"postgresql+psycopg://{user}:{quote(password, safe='')}"
+            f"postgresql+asyncpg://{user}:{quote(password, safe='')}"
             f"@{host}:{port}/{name}"
         )
 
