@@ -13,7 +13,7 @@ class BookCreate(BaseModel):
     language: str
 
 
-class Book(BookCreate):
+class BookItem(BookCreate):
     id: UUID
 
 

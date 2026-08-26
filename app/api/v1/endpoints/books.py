@@ -1,60 +1,53 @@
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
 
-from app.schemas.books import Book, BookCreate, BookUpdate
+from app.db.session import get_db
+from app.schemas.common import Page
+from app.schemas.books import BookItem, BookCreate, BookUpdate
+from app.services.books import BookService
 
 router = APIRouter(prefix="/books", tags=["books"])
-books_db: dict[int, Book] = {}
+service = BookService()
 
 
-def get_next_book_id() -> int:
-    if books_db:
-        return max(books_db.keys()) + 1
-    return 1
+@router.get("", response_model=Page[BookItem])
+async def get_books(
+    db: Annotated[Session, Depends(get_db)],
+    search: str | None = None,
+    page: int = 1,
+    page_size: int = 50,
+):
+    return service.list_documents(db=db, search=search, page=page, page_size=page_size)
 
 
-@router.get("", response_model=list[Book])
-async def get_books():
-    return list(books_db.values())
+@router.get("/{book_id}", response_model=BookItem)
+async def get_book(book_id: str, db: Annotated[Session, Depends(get_db)]):
+    return service.get_book(book_id=book_id, db=db)
 
 
-@router.get("/{book_id}", response_model=Book)
-async def get_book(book_id: int):
-    if book_id in books_db:
-        return books_db[book_id]
-    raise HTTPException(status_code=404, detail="Book not found")
+@router.post("", response_model=BookItem, status_code=status.HTTP_201_CREATED)
+async def create_book(
+    book_create: BookCreate,
+    db: Annotated[Session, Depends(get_db)],
+):
+    return await service.create_book(book_create=book_create, db=db)
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
-async def create_book(book: BookCreate):
-    book_id = get_next_book_id()
-    new_book = Book(id=book_id, **book.model_dump())
-    books_db[book_id] = new_book
-    return {
-        "message": f"Book '{new_book.title}' created successfully!",
-        "book_id": book_id,
-    }
-
-
-@router.patch("/{book_id}", response_model=Book)
-async def update_book(book_id: int, book: BookUpdate):
-    if book_id not in books_db:
-        raise HTTPException(status_code=404, detail="Book not found")
-
-    stored_book = books_db[book_id]
-
-    update_data = book.model_dump(exclude_unset=True)
-
-    for field, value in update_data.items():
-        setattr(stored_book, field, value)
-
-    return stored_book
+@router.patch("/{book_id}", response_model=BookItem)
+async def update_book(
+    book_id: str,
+    book_update: BookUpdate,
+    db: Annotated[Session, Depends(get_db)],
+):
+    return await service.update_book(book_id=book_id, book_update=book_update, db=db)
 
 
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_book(book_id: int):
-    if book_id not in books_db:
-        raise HTTPException(status_code=404, detail="Book not found")
-
-    books_db.pop(book_id)
+async def delete_book(
+    book_id: str,
+    db: Annotated[Session, Depends(get_db)],
+):
+    service.delete_book(book_id=book_id, db=db)
     return None

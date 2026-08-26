@@ -17,3 +17,6 @@ class Book(TimestampMixin, Base):
     published_date: Mapped[date] = mapped_column(Date, nullable=False)
     page_count: Mapped[int] = mapped_column(Integer, nullable=False)
     language: Mapped[str] = mapped_column(String(60), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<Book(id={self.id}, title={self.title}, author={self.author})>"
