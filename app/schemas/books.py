@@ -1,4 +1,5 @@
 from datetime import date
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -13,7 +14,7 @@ class BookCreate(BaseModel):
 
 
 class Book(BookCreate):
-    id: int
+    id: UUID
 
 
 class BookUpdate(BaseModel):

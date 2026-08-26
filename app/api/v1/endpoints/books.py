@@ -3,7 +3,6 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.schemas.books import Book, BookCreate, BookUpdate
 
-
 router = APIRouter(prefix="/books", tags=["books"])
 books_db: dict[int, Book] = {}
 

@@ -5,8 +5,10 @@ description = "FastAPI Beyond CRUD Full Course - A FastAPI Course"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "alembic>=1.19.1",
     "asyncpg>=0.31.0",
     "fastapi>=0.141.1",
+    "pre-commit>=4.6.2",
     "pydantic-settings>=2.15.0",
     "sqlalchemy>=2.0.52",
     "uvicorn>=0.52.4",

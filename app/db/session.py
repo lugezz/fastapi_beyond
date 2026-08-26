@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core.config import settings
 
-
 engine: AsyncEngine = create_async_engine(
     settings.database_url,
     echo=True,
@@ -24,4 +23,7 @@ SessionLocal = async_sessionmaker(
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with SessionLocal() as db:
-        yield db
+        try:
+            yield db
+        finally:
+            await db.close()

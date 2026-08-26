@@ -1,7 +1,6 @@
 
 from fastapi import APIRouter, Header
 
-
 router = APIRouter(prefix="/others", tags=["others"])
 
 
