@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.utils.auth import generate_password_hash, verify_password
 from app.models.users import User
 from app.schemas.common import Page
 from app.schemas.users import UserCreate, UserDetail, UserListItem, UserUpdate
@@ -74,8 +75,14 @@ class UserService:
     async def get_user(self, user_id: str, db: AsyncSession) -> UserDetail:
         return self._to_detail(await self._get_user(user_id, db))
 
-    async def create_user(self, data: UserCreate, db: AsyncSession) -> UserDetail:
+    async def _hash_password(self, password: str) -> str:
+        # Implement your password hashing logic here
+        # For example, using bcrypt:
+        return generate_password_hash(password)
+
+    async def signup_user(self, data: UserCreate, db: AsyncSession) -> UserDetail:
         await self._ensure_unique_email(db, str(data.email))
+        password_hash = await self._hash_password(data.password)  # Assuming you have a method to hash passwords
 
         user = User(
             id=uuid4(),
@@ -84,10 +91,22 @@ class UserService:
             first_name=data.first_name,
             last_name=data.last_name,
             is_verified=data.is_verified,
+            password_hash=password_hash,
         )
         db.add(user)
         await self._commit_or_conflict(db, detail="User data conflicts with an existing record")
         await db.refresh(user)
+        return self._to_detail(user)
+
+    async def _get_user_by_email(self, email: str, db: AsyncSession) -> User:
+        result = await db.execute(select(User).filter(User.email == email))
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        return user
+
+    async def get_user_by_email(self, email: str, db: AsyncSession) -> UserDetail:
+        user = await self._get_user_by_email(email, db)
         return self._to_detail(user)
 
     async def update_user(self, user_id: str, data: UserUpdate, db: AsyncSession) -> UserDetail:
@@ -99,7 +118,11 @@ class UserService:
             await self._ensure_unique_email(db, str(email), exclude_user_id=user_id)
 
         for field, value in updates.items():
-            setattr(user, field, value)
+            if field == "password":
+                hashed_password = await self._hash_password(value)
+                setattr(user, "password_hash", hashed_password)
+            else:
+                setattr(user, field, value)
 
         await self._commit_or_conflict(db, detail="User data conflicts with an existing record")
         await db.refresh(user)
@@ -109,3 +132,7 @@ class UserService:
         user = await self._get_user(user_id, db)
         await db.delete(user)
         await self._commit_or_conflict(db, detail="Cannot delete user due to related records")
+
+    async def verify_user_password(self, email: str, password: str, db: AsyncSession) -> bool:
+        user = await self._get_user_by_email(email, db)
+        return verify_password(password, user.password_hash)
