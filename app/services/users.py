@@ -2,8 +2,9 @@ from math import ceil
 from uuid import uuid4
 
 from fastapi import HTTPException, status
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.users import User
 from app.schemas.common import Page
@@ -11,24 +12,26 @@ from app.schemas.users import UserCreate, UserDetail, UserListItem, UserUpdate
 
 
 class UserService:
-    def _get_user(self, user_id: str, db: Session) -> User:
-        user = db.query(User).filter(User.id == user_id).one_or_none()
+    async def _get_user(self, user_id: str, db: AsyncSession) -> User:
+        result = await db.execute(select(User).filter(User.id == user_id))
+        user = result.scalar_one_or_none()
         if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         return user
 
-    def _ensure_unique_email(self, db: Session, email: str, exclude_user_id: str | None = None) -> None:
-        query = db.query(User).filter(User.email == email)
+    async def _ensure_unique_email(self, db: AsyncSession, email: str, exclude_user_id: str | None = None) -> None:
+        query = select(User).filter(User.email == email)
         if exclude_user_id is not None:
             query = query.filter(User.id != exclude_user_id)
-        if query.one_or_none() is not None:
+        result = await db.execute(query)
+        if result.scalar_one_or_none() is not None:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User email already exists")
 
-    def _commit_or_conflict(self, db: Session, detail: str) -> None:
+    async def _commit_or_conflict(self, db: AsyncSession, detail: str) -> None:
         try:
-            db.commit()
+            await db.commit()
         except IntegrityError as exc:
-            db.rollback()
+            await db.rollback()
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail) from exc
 
     def _to_detail(self, user: User) -> UserDetail:
@@ -39,26 +42,21 @@ class UserService:
             first_name=user.first_name,
             last_name=user.last_name,
             is_verified=user.is_verified,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
         )
 
-    def list_users(self, db: Session, page: int = 1, page_size: int = 50) -> Page[UserListItem]:
-        query = db.query(User)
-        users = query.all()
-        users.sort(key=lambda user: user.email.lower())
-
-        items = [
-            UserListItem(
-                user_id=str(user.id),
-                username=user.username,
-                email=user.email,
-                first_name=user.first_name,
-                last_name=user.last_name,
-                is_verified=user.is_verified,
+    async def list_users(self, db: AsyncSession, page: int = 1, page_size: int = 50) -> Page[UserListItem]:
+        total = await db.scalar(select(func.count()).select_from(User))
+        users = (
+            await db.scalars(
+                select(User)
+                .order_by(User.email.asc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
             )
-            for user in users
-        ]
-
-        total = len(items)
+        ).all()
+        items = [self._to_detail(user) for user in users]
         total_pages = ceil(total / page_size) if total else 0
         start = (page - 1) * page_size
         page_items = items[start:start + page_size]
@@ -73,11 +71,11 @@ class UserService:
             has_prev=page > 1 and total > 0,
         )
 
-    def get_user(self, user_id: str, db: Session) -> UserDetail:
-        return self._to_detail(self._get_user(user_id, db))
+    async def get_user(self, user_id: str, db: AsyncSession) -> UserDetail:
+        return self._to_detail(await self._get_user(user_id, db))
 
-    def create_user(self, data: UserCreate, db: Session) -> UserDetail:
-        self._ensure_unique_email(db, str(data.email))
+    async def create_user(self, data: UserCreate, db: AsyncSession) -> UserDetail:
+        await self._ensure_unique_email(db, str(data.email))
 
         user = User(
             id=uuid4(),
@@ -88,26 +86,26 @@ class UserService:
             is_verified=data.is_verified,
         )
         db.add(user)
-        self._commit_or_conflict(db, detail="User data conflicts with an existing record")
-        db.refresh(user)
+        await self._commit_or_conflict(db, detail="User data conflicts with an existing record")
+        await db.refresh(user)
         return self._to_detail(user)
 
-    def update_user(self, user_id: str, data: UserUpdate, db: Session) -> UserDetail:
-        user = self._get_user(user_id, db)
+    async def update_user(self, user_id: str, data: UserUpdate, db: AsyncSession) -> UserDetail:
+        user = await self._get_user(user_id, db)
         updates = data.model_dump(exclude_unset=True)
 
         email = updates.get("email")
         if email is not None:
-            self._ensure_unique_email(db, str(email), exclude_user_id=user_id)
+            await self._ensure_unique_email(db, str(email), exclude_user_id=user_id)
 
         for field, value in updates.items():
             setattr(user, field, value)
 
-        self._commit_or_conflict(db, detail="User data conflicts with an existing record")
-        db.refresh(user)
+        await self._commit_or_conflict(db, detail="User data conflicts with an existing record")
+        await db.refresh(user)
         return self._to_detail(user)
 
-    def delete_user(self, user_id: str, db: Session) -> None:
-        user = self._get_user(user_id, db)
-        db.delete(user)
-        self._commit_or_conflict(db, detail="Cannot delete user due to related records")
+    async def delete_user(self, user_id: str, db: AsyncSession) -> None:
+        user = await self._get_user(user_id, db)
+        await db.delete(user)
+        await self._commit_or_conflict(db, detail="Cannot delete user due to related records")
