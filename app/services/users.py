@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.utils.auth import generate_password_hash, verify_password
+from app.core.security import hash_password
 from app.models.users import User
 from app.schemas.common import Page
 from app.schemas.users import UserCreate, UserDetail, UserListItem, UserUpdate
@@ -78,7 +78,7 @@ class UserService:
     async def _hash_password(self, password: str) -> str:
         # Implement your password hashing logic here
         # For example, using bcrypt:
-        return generate_password_hash(password)
+        return hash_password(password)
 
     async def signup_user(self, data: UserCreate, db: AsyncSession) -> UserDetail:
         await self._ensure_unique_email(db, str(data.email))
@@ -132,7 +132,3 @@ class UserService:
         user = await self._get_user(user_id, db)
         await db.delete(user)
         await self._commit_or_conflict(db, detail="Cannot delete user due to related records")
-
-    async def verify_user_password(self, email: str, password: str, db: AsyncSession) -> bool:
-        user = await self._get_user_by_email(email, db)
-        return verify_password(password, user.password_hash)

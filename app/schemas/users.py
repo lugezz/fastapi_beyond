@@ -32,8 +32,3 @@ class UserUpdate(BaseModel):
     first_name: str | None = Field(None, max_length=100)
     last_name: str | None = Field(None, max_length=100)
     is_verified: bool | None = None
-
-
-class UserVerifyPassword(BaseModel):
-    email: EmailStr
-    password: str = Field(..., min_length=8, max_length=100)

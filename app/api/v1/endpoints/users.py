@@ -10,7 +10,6 @@ from app.schemas.users import (
     UserDetail,
     UserListItem,
     UserUpdate,
-    UserVerifyPassword,
 )
 from app.services.users import UserService
 
@@ -67,11 +66,3 @@ async def delete_user(
 ) -> Response:
     await service.delete_user(user_id, db)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.post("/verify-password", response_model=bool, summary="Verify user password")
-async def verify_user_password(
-    data: UserVerifyPassword,
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> bool:
-    return await service.verify_user_password(data.email, data.password, db)
