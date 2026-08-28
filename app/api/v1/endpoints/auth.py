@@ -7,6 +7,7 @@ from app.api.dependencies import get_current_user
 from app.db.session import get_db
 from app.models.users import User
 from app.schemas.auth import (
+    AuthMeResponse,
     ChangePasswordRequest,
     LoginRequest,
     RefreshTokenRequest,
@@ -17,6 +18,13 @@ from app.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 service = AuthService()
+
+
+@router.get("/me", response_model=AuthMeResponse, summary="Get current authenticated user")
+async def get_me(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> AuthMeResponse:
+    return await service.get_me(current_user)
 
 
 @router.post("/login", response_model=TokenPair, summary="Placeholder login")

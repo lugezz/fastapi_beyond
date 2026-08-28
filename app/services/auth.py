@@ -12,14 +12,46 @@ from app.core.security import (
 )
 from app.models.users import User
 from app.schemas.auth import (
+    AuthMeResponse,
     ChangePasswordRequest,
     LoginRequest,
     RefreshTokenRequest,
     TokenPair,
+    UserCapabilities,
 )
 
 
 class AuthService:
+    async def get_me(self, current_user: User) -> AuthMeResponse:
+        resp = {
+            "user_id": str(current_user.id),
+            "username": current_user.username,
+            "email": current_user.email,
+            "first_name": current_user.first_name,
+            "last_name": current_user.last_name,
+            "is_verified": current_user.is_verified,
+            "capabilities": self._build_capabilities(current_user),
+        }
+
+        return AuthMeResponse(**resp)
+
+    def _build_capabilities(self, current_user: User) -> UserCapabilities:
+        # TODO: Implement actual logic to determine user capabilities based on roles/permissions
+        return UserCapabilities(
+            can_view_all_employees=True,
+            can_manage_employees=True,
+            can_manage_documents=True,
+            can_manage_employee_files=True,
+            can_manage_notifications=True,
+            can_manage_requests=True,
+            can_manage_all_requests=True,
+            can_manage_assigned_requests=True,
+            can_manage_vacations=True,
+            can_upload_payslips=True,
+            can_track_signatures=True,
+            can_sign_payslips=True,
+        )
+
     async def login(self, payload: LoginRequest, db: AsyncSession) -> TokenPair:
         user = await db.scalar(
             select(User).where(User.email == payload.email)
