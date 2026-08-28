@@ -8,7 +8,6 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-
 password_context = CryptContext(
     schemes=["bcrypt"], deprecated="auto"
 )
@@ -17,14 +16,32 @@ password_context = CryptContext(
 def create_access_token(subject: str, expires_minutes: int | None = None) -> str:
     expires_delta = timedelta(minutes=expires_minutes or settings.access_token_expire_minutes)
     expires_at = datetime.now(UTC) + expires_delta
-    payload = {"sub": subject, "exp": expires_at, "type": "access"}
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    payload = {
+        "sub": subject,
+        "exp": expires_at,
+        "type": "access"
+    }
+    token = jwt.encode(
+        payload=payload,
+        key=settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm
+    )
+    return token
 
 
 def create_refresh_token(subject: str) -> str:
     expires_at = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
-    payload = {"sub": subject, "exp": expires_at, "type": "refresh"}
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    payload = {
+        "sub": subject,
+        "exp": expires_at,
+        "type": "refresh"
+    }
+    token = jwt.encode(
+        payload=payload,
+        key=settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm
+    )
+    return token
 
 
 def decode_token(token: str) -> dict:
