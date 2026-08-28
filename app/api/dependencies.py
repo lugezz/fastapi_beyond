@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_token
 from app.db.session import get_db
-from app.models.users import User
+from app.models.users import User, UserRole
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -58,3 +58,18 @@ async def get_current_user(
         )
 
     return user
+
+
+class RoleChecker:
+    def __init__(self, allowed_roles: list[UserRole]):
+        self.allowed_roles = allowed_roles
+
+    def __call__(
+        self,
+        current_user: Annotated[User, Depends(get_current_user)],
+    ) -> None:
+        if current_user.role not in self.allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have the required role to access this resource",
+            )

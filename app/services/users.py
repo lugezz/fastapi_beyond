@@ -9,10 +9,48 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import hash_password
 from app.models.users import User
 from app.schemas.common import Page
-from app.schemas.users import UserCreate, UserDetail, UserListItem, UserUpdate
+from app.schemas.users import (
+    UserCapabilities,
+    UserCreate,
+    UserDetail,
+    UserListItem,
+    UserMeResponse,
+    UserUpdate,
+)
 
 
 class UserService:
+    async def get_me(self, current_user: User) -> UserMeResponse:
+        resp = {
+            "user_id": str(current_user.id),
+            "username": current_user.username,
+            "email": current_user.email,
+            "first_name": current_user.first_name,
+            "last_name": current_user.last_name,
+            "is_verified": current_user.is_verified,
+            "role": current_user.role,
+            "capabilities": self._build_capabilities(current_user),
+        }
+
+        return UserMeResponse(**resp)
+
+    def _build_capabilities(self, current_user: User) -> UserCapabilities:
+        default_capabilities = {
+            "can_manage_users": False,
+            "can_manage_books": False,
+        }
+
+        if current_user.role == "admin":
+            default_capabilities["can_manage_users"] = True
+            default_capabilities["can_manage_books"] = True
+
+        if current_user.role == "leader":
+            default_capabilities["can_manage_books"] = True
+
+        return UserCapabilities(
+            **default_capabilities
+        )
+
     async def _get_user(self, user_id: str, db: AsyncSession) -> User:
         result = await db.execute(select(User).filter(User.id == user_id))
         user = result.scalar_one_or_none()
@@ -42,6 +80,7 @@ class UserService:
             email=user.email,
             first_name=user.first_name,
             last_name=user.last_name,
+            role=user.role,
             is_verified=user.is_verified,
             created_at=user.created_at,
             updated_at=user.updated_at,

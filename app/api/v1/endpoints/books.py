@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_current_user
+from app.api.dependencies import RoleChecker, get_current_user
 from app.db.session import get_db
 from app.schemas.books import BookCreate, BookItem, BookUpdate
 from app.schemas.common import Page
@@ -16,6 +16,9 @@ router = APIRouter(
     dependencies=[Depends(get_current_user)],
 )
 service = BookService()
+
+
+admin_required = RoleChecker(allowed_roles=["admin"])
 
 
 @router.get("", response_model=Page[BookItem])
@@ -37,6 +40,7 @@ async def get_book(book_id: UUID, db: Annotated[AsyncSession, Depends(get_db)]):
 async def create_book(
     book_create: BookCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[None, Depends(admin_required)]
 ):
     return await service.create_book(book_create=book_create, db=db)
 
@@ -46,6 +50,7 @@ async def update_book(
     book_id: UUID,
     book_update: BookUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[None, Depends(admin_required)]
 ):
     return await service.update_book(book_id=book_id, book_update=book_update, db=db)
 
@@ -54,6 +59,7 @@ async def update_book(
 async def delete_book(
     book_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[None, Depends(admin_required)]
 ):
     await service.delete_book(book_id=book_id, db=db)
     return None
