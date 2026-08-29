@@ -15,6 +15,7 @@ from app.schemas.books import (
 )
 from app.schemas.common import Page
 from app.schemas.reviews import ReviewItem
+from app.schemas.tags import TagItem
 
 
 class BookService:
@@ -85,6 +86,22 @@ class BookService:
 
         return result.items
 
+    async def get_book_tags(
+        self,
+        book_id: UUID,
+        db: AsyncSession,
+    ) -> list[TagItem]:
+        from app.services.tags import TagService
+
+        tag_service = TagService()
+
+        result = await tag_service.list_tags(
+            db=db,
+            book_id=book_id,
+        )
+
+        return result.items
+
     async def get_book(
         self,
         book_id: UUID,
@@ -97,6 +114,10 @@ class BookService:
             created_at=book.created_at,
             updated_at=book.updated_at,
             reviews=await self.get_book_reviews(
+                book_id=book_id,
+                db=db,
+            ),
+            tags=await self.get_book_tags(
                 book_id=book_id,
                 db=db,
             ),

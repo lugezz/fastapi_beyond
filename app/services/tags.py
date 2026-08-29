@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import (
     BookNotFoundError,
@@ -194,7 +195,11 @@ class TagService:
         data: TagAddItems,
         db: AsyncSession,
     ) -> list[TagItem]:
-        book = await db.get(Book, book_id)
+        book = await db.scalar(
+            select(Book)
+            .where(Book.id == book_id)
+            .options(selectinload(Book.tags))
+        )
 
         if book is None:
             raise BookNotFoundError()

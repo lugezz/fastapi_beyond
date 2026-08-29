@@ -25,3 +25,7 @@ class BookTagItem(BaseModel):
 
 class TagAddItems(BaseModel):
     tags: list[TagCreate]
+
+
+class BookTagAddItems(TagAddItems):
+    book_id: UUID

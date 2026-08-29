@@ -8,12 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import RoleChecker, get_current_user
 from app.core.exceptions import (
     BookNotFoundError,
-    TagNotFoundError,
     TagAlreadyExistsError,
+    TagNotFoundError,
 )
 from app.db.session import get_db
 from app.schemas.common import Page
-from app.schemas.tags import TagAddItems, TagCreate, TagItem, TagUpdate
+from app.schemas.tags import BookTagAddItems, TagCreate, TagItem, TagUpdate
 from app.services.tags import TagService
 
 router = APIRouter(
@@ -71,7 +71,7 @@ async def create_tag(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
-        return await service.create_tag(tag_create=tag_create, db=db)
+        return await service.create_tag(data=tag_create, db=db)
     except TagAlreadyExistsError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -86,16 +86,15 @@ async def create_tag(
 
 @router.post("/add-tags", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
 async def add_tags(
-    book_id: UUID,
-    tag_items: TagAddItems,
+    book_n_tags: BookTagAddItems,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
-        await service.add_tags_to_book(book_id=book_id, data=tag_items, db=db)
+        await service.add_tags_to_book(book_id=book_n_tags.book_id, data=book_n_tags, db=db)
     except BookNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Book with ID {book_id} not found",
+            detail=f"Book with ID {book_n_tags.book_id} not found",
         )
     except TagNotFoundError as e:
         raise HTTPException(
@@ -122,11 +121,16 @@ async def update_tag(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
-        return await service.update_tag(tag_id=tag_id, tag_update=tag_update, db=db)
+        return await service.update_tag(tag_id=tag_id, data=tag_update, db=db)
     except TagNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Tag with ID {tag_id} not found",
+        )
+    except TagAlreadyExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Tag with name '{tag_update.name}' already exists.",
         )
     except IntegrityError as e:
         raise HTTPException(
