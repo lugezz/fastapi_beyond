@@ -1,7 +1,9 @@
-from datetime import date
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel
+
+from app.schemas.reviews import ReviewItem
 
 
 class BookCreate(BaseModel):
@@ -25,3 +27,9 @@ class BookUpdate(BaseModel):
     published_date: date | None = None
     page_count: int | None = None
     language: str | None = None
+
+
+class BookDetail(BookItem):
+    created_at: datetime
+    updated_at: datetime
+    reviews: list[ReviewItem] = []

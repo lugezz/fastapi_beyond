@@ -1,17 +1,20 @@
-import logging
 from math import ceil
 from uuid import UUID, uuid4
 
-from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import BookNotFoundError, BookPermissionError
 from app.models.books import Book
-from app.models.users import User
-from app.schemas.books import BookCreate, BookItem, BookUpdate
+from app.models.users import User, UserRole
+from app.schemas.books import (
+    BookCreate,
+    BookDetail,
+    BookItem,
+    BookUpdate,
+)
 from app.schemas.common import Page
-
-logger = logging.getLogger(__name__)
+from app.schemas.reviews import ReviewItem
 
 
 class BookService:
@@ -23,26 +26,35 @@ class BookService:
         page_size: int = 50,
         user_id: UUID | None = None,
     ) -> Page[BookItem]:
-        """ List books with optional search and pagination.
-        If user_id is provided, filter books by that user.
-        """
         filters = []
-        if user_id:
+
+        if user_id is not None:
             filters.append(Book.user_id == user_id)
 
         if search:
-            filters.append(Book.title.ilike(f"%{search.strip()}%"))
+            filters.append(
+                Book.title.ilike(f"%{search.strip()}%")
+            )
 
-        total = await db.scalar(select(func.count()).select_from(Book).where(*filters))
+        total = await db.scalar(
+            select(func.count())
+            .select_from(Book)
+            .where(*filters)
+        )
+
         books = (
             await db.scalars(
                 select(Book)
                 .where(*filters)
-                .order_by(Book.published_date.desc(), Book.title.asc())
+                .order_by(
+                    Book.published_date.desc(),
+                    Book.title.asc(),
+                )
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )
         ).all()
+
         items = [self._to_item(book) for book in books]
 
         total_pages = ceil(total / page_size) if total else 0
@@ -54,31 +66,61 @@ class BookService:
             total=total,
             total_pages=total_pages,
             has_next=page < total_pages,
-            has_prev=page > 1 and total > 0,
+            has_prev=page > 1,
         )
 
-    async def get_book(self, book_id: UUID, db: AsyncSession) -> BookItem:
+    async def get_book_reviews(
+        self,
+        book_id: UUID,
+        db: AsyncSession,
+    ) -> list[ReviewItem]:
+        from app.services.reviews import ReviewService
+
+        review_service = ReviewService()
+
+        result = await review_service.list_reviews(
+            db=db,
+            book_id=book_id,
+        )
+
+        return result.items
+
+    async def get_book(
+        self,
+        book_id: UUID,
+        db: AsyncSession,
+    ) -> BookDetail:
         book = await self._get_book(book_id, db)
-        return self._to_item(book)
+
+        return BookDetail(
+            **self._to_item(book).model_dump(),
+            created_at=book.created_at,
+            updated_at=book.updated_at,
+            reviews=await self.get_book_reviews(
+                book_id=book_id,
+                db=db,
+            ),
+        )
 
     async def create_book(
         self,
-        book_create: BookCreate,
+        data: BookCreate,
         db: AsyncSession,
-        user_id: UUID
+        current_user: User,
     ) -> BookItem:
-
         book = Book(
             id=uuid4(),
-            title=book_create.title,
-            author=book_create.author,
-            publisher=book_create.publisher,
-            published_date=book_create.published_date,
-            page_count=book_create.page_count,
-            language=book_create.language,
-            user_id=user_id
+            title=data.title,
+            author=data.author,
+            publisher=data.publisher,
+            published_date=data.published_date,
+            page_count=data.page_count,
+            language=data.language,
+            user_id=current_user.id,
         )
+
         db.add(book)
+
         await db.commit()
         await db.refresh(book)
 
@@ -87,37 +129,59 @@ class BookService:
     async def update_book(
         self,
         book_id: UUID,
-        book_update: BookUpdate,
+        data: BookUpdate,
         db: AsyncSession,
-        user_id: UUID | None = None
+        current_user: User,
     ) -> BookItem:
         book = await self._get_book(book_id, db)
 
-        for field, value in book_update.model_dump(exclude_unset=True).items():
-            setattr(book, field, value)
+        self._ensure_can_manage_book(book, current_user)
 
-        if user_id is not None:
-            book.user_id = user_id
+        updates = data.model_dump(exclude_unset=True)
+
+        for field, value in updates.items():
+            setattr(book, field, value)
 
         await db.commit()
         await db.refresh(book)
 
         return self._to_item(book)
 
-    async def delete_book(self, book_id: UUID, db: AsyncSession, user_id: UUID | None = None) -> None:
+    async def delete_book(
+        self,
+        book_id: UUID,
+        db: AsyncSession,
+        current_user: User,
+    ) -> None:
         book = await self._get_book(book_id, db)
-        if user_id is not None and book.user_id != user_id:
-            user = await db.get(User, user_id)
-            if user is None or user.role != "admin":
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to delete this book")
+
+        self._ensure_can_manage_book(book, current_user)
+
         await db.delete(book)
         await db.commit()
 
-    async def _get_book(self, book_id: UUID, db: AsyncSession) -> Book:
+    async def _get_book(
+        self,
+        book_id: UUID,
+        db: AsyncSession,
+    ) -> Book:
         book = await db.get(Book, book_id)
+
         if book is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
+            raise BookNotFoundError(book_id)
+
         return book
+
+    @staticmethod
+    def _ensure_can_manage_book(
+        book: Book,
+        current_user: User,
+    ) -> None:
+        if (
+            book.user_id != current_user.id
+            and current_user.role != UserRole.ADMIN
+        ):
+            raise BookPermissionError()
 
     @staticmethod
     def _to_item(book: Book) -> BookItem:

@@ -6,14 +6,15 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.books import Book
 from app.models.reviews import Review
-from app.models.users import User
 from app.schemas.common import Page
 from app.schemas.reviews import ReviewCreate, ReviewItem, ReviewUpdate
-
+from app.services.books import BookService
+from app.services.users import UserService
 
 logger = logging.getLogger(__name__)
+book_service = BookService()
+user_service = UserService()
 
 
 class ReviewService:
@@ -80,13 +81,13 @@ class ReviewService:
 
     async def create_review(self, review_create: ReviewCreate, db: AsyncSession, user_id: UUID) -> ReviewItem:
         """ Create a new review. """
-        book = await db.get(Book, review_create.book_id)
+        book = await book_service._get_book(review_create.book_id, db)
         if not book:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Book with id {review_create.book_id} not found.",
             )
-        user = await db.get(User, user_id)
+        user = await user_service._get_user(user_id, db)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -113,7 +114,7 @@ class ReviewService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Review with id {review_id} not found.",
             )
-        user = await db.get(User, user_id)
+        user = await user_service._get_user(user_id, db)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -142,7 +143,7 @@ class ReviewService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Review with id {review_id} not found.",
             )
-        user = await db.get(User, user_id)
+        user = await user_service._get_user(user_id, db)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

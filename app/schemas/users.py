@@ -1,12 +1,14 @@
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
 from app.schemas.books import BookItem
+from app.schemas.reviews import ReviewItem
 
 
 class UserListItem(BaseModel):
-    user_id: str
+    user_id: UUID
     username: str
     email: EmailStr
     first_name: str
@@ -48,3 +50,4 @@ class UserMeResponse(UserListItem):
     # Others
     capabilities: UserCapabilities
     books: list[BookItem] = []
+    reviews: list[ReviewItem] = []
