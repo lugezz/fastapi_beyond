@@ -22,6 +22,7 @@ class Book(TimestampMixin, Base):
 
     user = relationship("User", back_populates="books")
     reviews = relationship("Review", back_populates="book", cascade="all, delete-orphan")
+    tags = relationship("Tag", secondary="book_tags", back_populates="books")
 
     def __repr__(self) -> str:
         return f"<Book(id={self.id}, title={self.title}, author={self.author})>"
