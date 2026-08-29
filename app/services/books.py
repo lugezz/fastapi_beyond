@@ -21,8 +21,14 @@ class BookService:
         search: str | None = None,
         page: int = 1,
         page_size: int = 50,
+        user_id: UUID | None = None,
     ) -> Page[BookItem]:
+        """ List books with optional search and pagination.
+        If user_id is provided, filter books by that user.
+        """
         filters = []
+        if user_id:
+            filters.append(Book.user_id == user_id)
 
         if search:
             filters.append(Book.title.ilike(f"%{search.strip()}%"))

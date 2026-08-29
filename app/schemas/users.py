@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.schemas.books import BookItem
+
 
 class UserListItem(BaseModel):
     user_id: str
@@ -45,3 +47,4 @@ class UserCapabilities(BaseModel):
 class UserMeResponse(UserListItem):
     # Others
     capabilities: UserCapabilities
+    books: list[BookItem] = []

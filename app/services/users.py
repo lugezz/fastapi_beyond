@@ -7,7 +7,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
+from app.models.books import Book
 from app.models.users import User
+from app.schemas.books import BookItem
 from app.schemas.common import Page
 from app.schemas.users import (
     UserCapabilities,
@@ -20,7 +22,25 @@ from app.schemas.users import (
 
 
 class UserService:
-    async def get_me(self, current_user: User) -> UserMeResponse:
+    async def get_user_books(self, user_id: str, db: AsyncSession) -> list[Book]:
+        result = await db.execute(select(Book).filter(Book.user_id == user_id))
+        books = result.scalars().all()
+        return books
+
+    def _book_details(self, book: Book) -> BookItem:
+        return BookItem(
+            id=str(book.id),
+            title=book.title,
+            author=book.author,
+            publisher=book.publisher,
+            published_date=book.published_date,
+            page_count=book.page_count,
+            language=book.language,
+            user_id=str(book.user_id),
+        )
+
+    async def get_me(self, current_user: User, db: AsyncSession) -> UserMeResponse:
+        books = await self.get_user_books(str(current_user.id), db)
         resp = {
             "user_id": str(current_user.id),
             "username": current_user.username,
@@ -30,6 +50,7 @@ class UserService:
             "is_verified": current_user.is_verified,
             "role": current_user.role,
             "capabilities": self._build_capabilities(current_user),
+            "books": [self._book_details(book) for book in books],
         }
 
         return UserMeResponse(**resp)

@@ -28,8 +28,9 @@ user_required = RoleChecker(allowed_roles=["user", "leader", "admin"])
 async def get_me(
     current_user: Annotated[User, Depends(get_current_user)],
     _: Annotated[None, Depends(user_required)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> UserMeResponse:
-    return await service.get_me(current_user)
+    return await service.get_me(current_user, db)
 
 
 @router.get("", response_model=Page[UserListItem], summary="List users")
@@ -61,7 +62,6 @@ async def get_user_by_email(
 async def signup_user(
     data: UserCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _: Annotated[None, Depends(admin_or_leader_required)],
 ) -> UserDetail:
     return await service.signup_user(data, db)
 
