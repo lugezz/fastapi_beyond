@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.schemas.reviews import ReviewItem
+from app.schemas.tags import TagItem
 
 
 class BookCreate(BaseModel):
@@ -33,3 +34,4 @@ class BookDetail(BookItem):
     created_at: datetime
     updated_at: datetime
     reviews: list[ReviewItem] = []
+    tags: list[TagItem] = []

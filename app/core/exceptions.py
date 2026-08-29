@@ -1,18 +1,32 @@
-class UserNotFoundError(Exception):
+class BooklyException(Exception):
+    """This is the base class for all bookly errors"""
+
     pass
 
 
-class UserEmailAlreadyExistsError(Exception):
+class UserNotFoundError(BooklyException):
     pass
 
 
-class BookNotFoundError(Exception):
+class UserEmailAlreadyExistsError(BooklyException):
     pass
 
 
-class ReviewNotFoundError(Exception):
+class BookNotFoundError(BooklyException):
     pass
 
 
-class BookPermissionError(Exception):
+class ReviewNotFoundError(BooklyException):
+    pass
+
+
+class BookPermissionError(BooklyException):
+    pass
+
+
+class TagNotFoundError(BooklyException):
+    pass
+
+
+class TagAlreadyExistsError(BooklyException):
     pass

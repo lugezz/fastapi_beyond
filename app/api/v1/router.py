@@ -4,6 +4,7 @@ from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.books import router as books_router
 from app.api.v1.endpoints.others import router as others_router
 from app.api.v1.endpoints.reviews import router as reviews_router
+from app.api.v1.endpoints.tags import router as tags_router
 from app.api.v1.endpoints.users import router as users_router
 from app.core.config import settings
 
@@ -12,4 +13,5 @@ router.include_router(books_router)
 router.include_router(reviews_router)
 router.include_router(users_router)
 router.include_router(auth_router)
+router.include_router(tags_router)
 router.include_router(others_router)

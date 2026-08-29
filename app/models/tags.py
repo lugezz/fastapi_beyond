@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import String
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,8 +23,14 @@ class BookTag(Base):
     __tablename__ = "book_tags"
 
     book_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, nullable=False
+        PGUUID(as_uuid=True),
+        ForeignKey("books.id"),
+        primary_key=True,
+        nullable=False,
     )
     tag_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, nullable=False
+        PGUUID(as_uuid=True),
+        ForeignKey("tags.id"),
+        primary_key=True,
+        nullable=False,
     )
