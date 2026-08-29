@@ -67,9 +67,11 @@ class RoleChecker:
     def __call__(
         self,
         current_user: Annotated[User, Depends(get_current_user)],
-    ) -> None:
+    ) -> User:
         if current_user.role not in self.allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User does not have the required role to access this resource",
             )
+
+        return current_user

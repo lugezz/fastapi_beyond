@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import EmailStr, TypeAdapter
 from sqlalchemy import Boolean, Enum, String
-from sqlalchemy.orm import Mapped, mapped_column, validates
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.models.base import Base, TimestampMixin, uuid_pk_column
 
@@ -35,6 +35,8 @@ class User(TimestampMixin, Base):
         default=UserRole.USER,
         server_default=UserRole.USER.value,
     )
+
+    books = relationship("Book", back_populates="user", cascade="all, delete-orphan")
 
     @validates("email")
     def validate_email(self, _: str, value: str) -> str:

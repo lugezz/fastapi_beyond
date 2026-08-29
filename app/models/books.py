@@ -1,8 +1,9 @@
 from datetime import date
 from uuid import UUID
 
-from sqlalchemy import Date, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Date, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, uuid_pk_column
 
@@ -17,6 +18,9 @@ class Book(TimestampMixin, Base):
     published_date: Mapped[date] = mapped_column(Date, nullable=False)
     page_count: Mapped[int] = mapped_column(Integer, nullable=False)
     language: Mapped[str] = mapped_column(String(60), nullable=False)
+    user_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+
+    user = relationship("User", back_populates="books")
 
     def __repr__(self) -> str:
         return f"<Book(id={self.id}, title={self.title}, author={self.author})>"

@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.books import Book
+from app.models.users import User
 from app.schemas.books import BookCreate, BookItem, BookUpdate
 from app.schemas.common import Page
 
@@ -58,6 +59,7 @@ class BookService:
         self,
         book_create: BookCreate,
         db: AsyncSession,
+        user_id: UUID
     ) -> BookItem:
 
         book = Book(
@@ -68,6 +70,7 @@ class BookService:
             published_date=book_create.published_date,
             page_count=book_create.page_count,
             language=book_create.language,
+            user_id=user_id
         )
         db.add(book)
         await db.commit()
@@ -80,19 +83,27 @@ class BookService:
         book_id: UUID,
         book_update: BookUpdate,
         db: AsyncSession,
+        user_id: UUID | None = None
     ) -> BookItem:
         book = await self._get_book(book_id, db)
 
         for field, value in book_update.model_dump(exclude_unset=True).items():
             setattr(book, field, value)
 
+        if user_id is not None:
+            book.user_id = user_id
+
         await db.commit()
         await db.refresh(book)
 
         return self._to_item(book)
 
-    async def delete_book(self, book_id: UUID, db: AsyncSession) -> None:
+    async def delete_book(self, book_id: UUID, db: AsyncSession, user_id: UUID | None = None) -> None:
         book = await self._get_book(book_id, db)
+        if user_id is not None and book.user_id != user_id:
+            user = await db.get(User, user_id)
+            if user is None or user.role != "admin":
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to delete this book")
         await db.delete(book)
         await db.commit()
 
@@ -112,4 +123,5 @@ class BookService:
             published_date=book.published_date,
             page_count=book.page_count,
             language=book.language,
+            user_id=book.user_id,
         )

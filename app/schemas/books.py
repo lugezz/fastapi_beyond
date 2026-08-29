@@ -15,6 +15,7 @@ class BookCreate(BaseModel):
 
 class BookItem(BookCreate):
     id: UUID
+    user_id: UUID
 
 
 class BookUpdate(BaseModel):
