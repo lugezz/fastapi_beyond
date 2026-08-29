@@ -21,6 +21,7 @@ class Book(TimestampMixin, Base):
     user_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
 
     user = relationship("User", back_populates="books")
+    reviews = relationship("Review", back_populates="book", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Book(id={self.id}, title={self.title}, author={self.author})>"

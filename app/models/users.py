@@ -37,6 +37,7 @@ class User(TimestampMixin, Base):
     )
 
     books = relationship("Book", back_populates="user", cascade="all, delete-orphan")
+    reviews = relationship("Review", back_populates="user", cascade="all, delete-orphan")
 
     @validates("email")
     def validate_email(self, _: str, value: str) -> str:

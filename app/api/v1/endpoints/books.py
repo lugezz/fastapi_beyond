@@ -31,30 +31,18 @@ async def get_books(
     page_size: int = 50,
     user_id: UUID | None = None,
 ):
-    try:
-        return await service.list_books(
-            db=db,
-            search=search,
-            page=page,
-            page_size=page_size,
-            user_id=user_id,
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": "An error occurred while fetching books.", "details": str(e)},
-        )
+    return await service.list_books(
+        db=db,
+        search=search,
+        page=page,
+        page_size=page_size,
+        user_id=user_id,
+    )
 
 
 @router.get("/{book_id}", response_model=BookItem)
 async def get_book(book_id: UUID, db: Annotated[AsyncSession, Depends(get_db)]):
-    try:
-        return await service.get_book(book_id=book_id, db=db)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": "An error occurred while fetching the book.", "details": str(e)},
-        )
+    return await service.get_book(book_id=book_id, db=db)
 
 
 @router.post("", response_model=BookItem, status_code=status.HTTP_201_CREATED)
