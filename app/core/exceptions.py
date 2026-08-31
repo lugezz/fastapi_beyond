@@ -4,8 +4,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse, Response
-from sqlalchemy.exc import IntegrityError
-
+from sqlalchemy.exc import IntegrityError, StatementError
 
 ExceptionHandler = Callable[[Request, Exception], Awaitable[Response]]
 logger = logging.getLogger(__name__)
@@ -75,6 +74,18 @@ async def integrity_error_handler(
         status_code=status.HTTP_409_CONFLICT,
         content={
             "detail": "The operation conflicts with existing data.",
+        },
+    )
+
+
+async def statement_error_handler(
+    _request: Request,
+    _exc: StatementError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={
+            "detail": "A database statement error occurred.",
         },
     )
 
@@ -158,6 +169,10 @@ def register_infrastructure_errors(app: FastAPI) -> None:
     app.add_exception_handler(
         IntegrityError,
         integrity_error_handler,
+    )
+    app.add_exception_handler(
+        StatementError,
+        statement_error_handler,
     )
 
 

@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import RoleChecker, get_current_user
@@ -55,18 +55,7 @@ async def create_book(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(admin_required)]
 ):
-    try:
-        return await service.create_book(data=book_create, db=db, current_user=current_user)
-    except IntegrityError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Integrity error occurred while creating the book.", "details": str(e)},
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred: {str(e)}",
-        )
+    return await service.create_book(data=book_create, db=db, current_user=current_user)
 
 
 @router.patch("/{book_id}", response_model=BookItem)
@@ -76,18 +65,7 @@ async def update_book(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(admin_required)]
 ):
-    try:
-        return await service.update_book(book_id=book_id, book_update=book_update, db=db, user_id=current_user.id)
-    except IntegrityError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Integrity error occurred while updating the book.", "details": str(e)},
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred: {str(e)}",
-        )
+    return await service.update_book(book_id=book_id, book_update=book_update, db=db, user_id=current_user.id)
 
 
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -96,16 +74,4 @@ async def delete_book(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(admin_required)]
 ):
-    try:
-        await service.delete_book(book_id=book_id, db=db, current_user=current_user)
-    except IntegrityError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Integrity error occurred while deleting the book.", "details": str(e)},
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred: {str(e)}",
-        )
-    return None
+    await service.delete_book(book_id=book_id, db=db, current_user=current_user)

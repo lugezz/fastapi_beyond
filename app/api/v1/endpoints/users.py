@@ -1,7 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy.exc import StatementError
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import RoleChecker, get_current_user
@@ -73,32 +72,7 @@ async def update_user(
     db: Annotated[AsyncSession, Depends(get_db)],
     _: Annotated[None, Depends(admin_or_leader_required)],
 ) -> UserDetail:
-    try:
-        return await service.update_user(user_id, data, db)
-
-    except StatementError as e:
-        print(f"Database statement error: {e}")
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user role.",
-        )
-
-    except ValueError as e:
-        print(f"Error updating user: {e}")
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
-
-    except Exception as e:
-        print(f"Unexpected error updating user: {e}")
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        )
+    return await service.update_user(user_id, data, db)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete user")

@@ -1,8 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.exc import IntegrityError
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import RoleChecker, get_current_user
@@ -32,30 +31,18 @@ async def get_reviews(
     book_id: UUID | None = None,
     user_id: UUID | None = None,
 ):
-    try:
-        return await service.list_reviews(
-            db=db,
-            book_id=book_id,
-            user_id=user_id,
-            page=page,
-            page_size=page_size,
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": "An error occurred while fetching reviews.", "details": str(e)},
-        )
+    return await service.list_reviews(
+        db=db,
+        book_id=book_id,
+        user_id=user_id,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/{review_id}", response_model=ReviewItem)
 async def get_review(review_id: UUID, db: Annotated[AsyncSession, Depends(get_db)]):
-    try:
-        return await service.get_review(review_id=review_id, db=db)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": "An error occurred while fetching the review.", "details": str(e)},
-        )
+    return await service.get_review(review_id=review_id, db=db)
 
 
 @router.post("", response_model=ReviewItem, status_code=status.HTTP_201_CREATED)
@@ -64,13 +51,7 @@ async def create_review(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(user_required)]
 ):
-    try:
-        return await service.create_review(review_create=review_create, db=db, user_id=current_user.id)
-    except IntegrityError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Integrity error occurred while creating the review.", "details": str(e)},
-        )
+    return await service.create_review(review_create=review_create, db=db, user_id=current_user.id)
 
 
 @router.patch("/{review_id}", response_model=ReviewItem)
@@ -89,11 +70,4 @@ async def delete_review(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(user_required)]
 ):
-    try:
-        await service.delete_review(review_id=review_id, db=db, user_id=current_user.id)
-    except IntegrityError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Integrity error occurred while deleting the review.", "details": str(e)},
-        )
-    return None
+    await service.delete_review(review_id=review_id, db=db, user_id=current_user.id)
