@@ -2,11 +2,9 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import RoleChecker, get_current_user
-from app.core.exceptions import BookNotFoundError, BookPermissionError
 from app.db.session import get_db
 from app.models.users import User
 from app.schemas.books import (
@@ -48,23 +46,7 @@ async def get_books(
 
 @router.get("/{book_id}", response_model=BookDetail)
 async def get_book(book_id: UUID, db: Annotated[AsyncSession, Depends(get_db)]):
-    try:
-        return await service.get_book(book_id=book_id, db=db)
-    except BookNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Book with ID {book_id} not found",
-        )
-    except BookPermissionError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"You do not have permission to access book with ID {book_id}",
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred: {str(e)}",
-        )
+    return await service.get_book(book_id=book_id, db=db)
 
 
 @router.post("", response_model=BookItem, status_code=status.HTTP_201_CREATED)
@@ -96,16 +78,6 @@ async def update_book(
 ):
     try:
         return await service.update_book(book_id=book_id, book_update=book_update, db=db, user_id=current_user.id)
-    except BookNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Book with ID {book_id} not found",
-        )
-    except BookPermissionError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"You do not have permission to update book with ID {book_id}",
-        )
     except IntegrityError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -126,16 +98,6 @@ async def delete_book(
 ):
     try:
         await service.delete_book(book_id=book_id, db=db, current_user=current_user)
-    except BookNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Book with ID {book_id} not found",
-        )
-    except BookPermissionError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"You do not have permission to delete book with ID {book_id}",
-        )
     except IntegrityError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
