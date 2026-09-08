@@ -70,7 +70,19 @@ class AuthService:
         })
         return token
 
-    async def confirm_password_reset(self, token: str, new_password: str, db: AsyncSession) -> None:
+    async def confirm_password_reset(
+        self,
+        token: str,
+        new_password: str,
+        confirm_new_password: str,
+        db: AsyncSession
+    ) -> None:
+        if new_password != confirm_new_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password and confirm new password do not match",
+            )
+
         claims = token_utils.decode_url_safe_token(token)
         if (
             not claims

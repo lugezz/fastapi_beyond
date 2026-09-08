@@ -28,6 +28,7 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetConfirmRequest(BaseModel):
     token: str
     new_password: str = Field(min_length=6, max_length=128)
+    confirm_new_password: str = Field(min_length=6, max_length=128)
 
 
 class VerifyPassword(BaseModel):

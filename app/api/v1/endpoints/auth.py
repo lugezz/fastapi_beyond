@@ -89,5 +89,10 @@ async def confirm_password_reset(
     payload: PasswordResetConfirmRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
-    await service.confirm_password_reset(payload.token, payload.new_password, db)
+    await service.confirm_password_reset(
+        token=payload.token,
+        new_password=payload.new_password,
+        confirm_new_password=payload.confirm_new_password,
+        db=db
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
