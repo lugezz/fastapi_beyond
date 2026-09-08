@@ -1,5 +1,6 @@
 
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import FastAPI
 
@@ -7,6 +8,11 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.exceptions import register_all_errors
 from app.core.middleware import register_middleware
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 
 @asynccontextmanager

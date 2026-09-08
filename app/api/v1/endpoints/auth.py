@@ -9,6 +9,8 @@ from app.models.users import User
 from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
     RefreshTokenRequest,
     TokenPair,
     VerifyPassword,
@@ -51,3 +53,31 @@ async def verify_user_password(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> bool:
     return await service.verify_user_password(data.email, data.password, db)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT, summary="Logout current user")
+async def logout(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    await service.logout(current_user, db)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/password-reset", response_model=dict, summary="Reset user password")
+async def reset_password(
+    payload: PasswordResetRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    email = payload.email
+    token = await service.reset_password(email, db)
+    return {"reset_token": token}
+
+
+@router.post("/password-reset/confirm", status_code=status.HTTP_204_NO_CONTENT, summary="Confirm password reset with token")
+async def confirm_password_reset(
+    payload: PasswordResetConfirmRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    await service.confirm_password_reset(payload.token, payload.new_password, db)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
