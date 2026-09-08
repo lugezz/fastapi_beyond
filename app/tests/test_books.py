@@ -29,15 +29,15 @@ def test_create_book(test_client, fake_book_service, fake_session):
     assert fake_book_service.create_book_called_once_with(book_create_data, fake_session)
 
 
-def test_get_book_by_uid(test_client, fake_book_service, test_book, fake_session):
-    test_client.get(f"{books_prefix}/{test_book.uid}")
+def test_get_book_by_id(test_client, fake_book_service, test_book, fake_session):
+    test_client.get(f"{books_prefix}/{test_book.id}")
 
     assert fake_book_service.get_book_called_once()
-    assert fake_book_service.get_book_called_once_with(test_book.uid, fake_session)
+    assert fake_book_service.get_book_called_once_with(test_book.id, fake_session)
 
 
-def test_update_book_by_uid(test_client, fake_book_service, test_book, fake_session):
-    test_client.put(f"{books_prefix}/{test_book.uid}")
+def test_update_book_by_id(test_client, fake_book_service, test_book, fake_session):
+    test_client.put(f"{books_prefix}/{test_book.id}")
 
     assert fake_book_service.get_book_called_once()
-    assert fake_book_service.get_book_called_once_with(test_book.uid, fake_session)
+    assert fake_book_service.get_book_called_once_with(test_book.id, fake_session)

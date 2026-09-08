@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.dependencies import get_current_user, RoleChecker
+from app.api.dependencies import RoleChecker, get_current_user
 from app.db.session import get_db
 from app.main import app
 from app.models.books import Book
@@ -50,12 +50,12 @@ def test_client():
 @pytest.fixture
 def test_book():
     return Book(
-        uid=uuid.uuid4(),
-        user_uid=uuid.uuid4(),
+        id=uuid.uuid4(),
+        user_id=uuid.uuid4(),
         title="sample title",
-        description="sample description",
+        author="sample author",
         page_count=200,
         language="English",
+        publisher="sample publisher",
         published_date=datetime.now(),
-        update_at=datetime.now()
     )
