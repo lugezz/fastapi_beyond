@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
+    # Redis
+    redis_host: Optional[str] = None
+    redis_port: Optional[int] = None
+    redis_db: Optional[int] = None
+    redis_password: Optional[str] = None
+
     @property
     def database_url(self) -> str:
         """Return the database URL from env or construct from components"""
@@ -50,6 +56,24 @@ class Settings(BaseSettings):
             f"postgresql+asyncpg://{user}:{quote(password, safe='')}"
             f"@{host}:{port}/{name}"
         )
+
+    @property
+    def redis_url(self) -> str:
+        """Return the Redis URL from env or construct from components"""
+        if self.redis_host and self.redis_port is not None:
+            password_part = f":{quote(self.redis_password, safe='')}" if self.redis_password else ""
+            return f"redis://{password_part}@{self.redis_host}:{self.redis_port}/{self.redis_db or 0}"
+        return ""
+
+    @property
+    def broker_url(self) -> str:
+        """Return the broker URL for Celery"""
+        return self.redis_url
+
+    @property
+    def result_url(self) -> str:
+        """Return the result URL for Celery"""
+        return self.redis_url
 
     def _parse_db_url(self) -> None:
         """Parse DATABASE_URL and populate db_* fields if they're not already set"""

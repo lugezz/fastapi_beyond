@@ -1,5 +1,7 @@
 
-from fastapi import APIRouter, Header
+import time
+
+from fastapi import APIRouter, BackgroundTasks, Header
 
 router = APIRouter(prefix="/others", tags=["others"])
 
@@ -28,3 +30,20 @@ async def get_headers(
         "Host": host
     }
     return {"requested_headers": requested_headers}
+
+
+@router.post("/long-request")
+async def long_request(
+    payload: dict,
+    background_tasks: BackgroundTasks
+):
+    email = payload.get("email", "")
+
+    def sleep_task():
+        time.sleep(5)
+        print(f"Finished long request for email: {email}")
+
+    background_tasks.add_task(sleep_task)
+    return {
+        "message": f"This is a long request endpoint from email: {email}"
+    }
