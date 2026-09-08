@@ -1,7 +1,10 @@
 
 import time
 
-from fastapi import APIRouter, BackgroundTasks, Header
+from fastapi import APIRouter, BackgroundTasks, Header, status
+
+from app.schemas.others import EmailPayload
+from app.tasks.celery_tasks import send_email
 
 router = APIRouter(prefix="/others", tags=["others"])
 
@@ -46,4 +49,18 @@ async def long_request(
     background_tasks.add_task(sleep_task)
     return {
         "message": f"This is a long request endpoint from email: {email}"
+    }
+
+
+@router.post("/send-email", response_model=dict, status_code=status.HTTP_202_ACCEPTED)
+async def send_email_in_background(payload: EmailPayload):
+    recipients = payload.recipients
+    subject = payload.subject
+    body = payload.body
+
+    task = send_email.delay(recipients, subject, body)
+
+    return {
+        "message": "Email task queued",
+        "task_id": task.id,
     }
