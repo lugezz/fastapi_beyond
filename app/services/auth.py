@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import (
     UserNotFoundError,
 )
-
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -25,7 +24,6 @@ from app.schemas.auth import (
     TokenPair,
 )
 from app.services.users import UserService
-
 
 logger = logging.getLogger(__name__)
 token_utils = TokenUtils()
@@ -60,30 +58,41 @@ class AuthService:
         return None
 
     async def reset_password(self, email: str, db: AsyncSession) -> str:
-        user = await self.user_service.get_user_by_email(email, db)
+        user = await self.user_service._get_user_by_email(email, db)
 
         if not user:
             raise UserNotFoundError()
 
-        token = token_utils.create_url_safe_token({"sub": user.email})
+        token = token_utils.create_url_safe_token({
+            "sub": user.email,
+            "type": "password_reset",
+            "version": user.password_reset_version,
+        })
         return token
 
     async def confirm_password_reset(self, token: str, new_password: str, db: AsyncSession) -> None:
         claims = token_utils.decode_url_safe_token(token)
-        logger.info("Decoded claims from password reset token: %s", claims)
-
-        if not claims or "sub" not in claims:
+        if (
+            not claims
+            or claims.get("type") != "password_reset"
+            or not claims.get("sub")
+            or not isinstance(claims.get("version"), int)
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid or expired token",
             )
 
         email = claims["sub"]
-        user = await self.user_service.get_user_by_email(email, db)
-        if not user:
-            raise UserNotFoundError()
+        user = await self.user_service._get_user_by_email(email, db)
+        if not user or user.password_reset_version != claims["version"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired token",
+            )
 
         user.password_hash = hash_password(new_password)
+        user.password_reset_version += 1
         await db.commit()
 
     async def refresh(self, payload: RefreshTokenRequest, db: AsyncSession) -> TokenPair:
@@ -121,6 +130,7 @@ class AuthService:
             )
 
         current_user.password_hash = hash_password(payload.new_password)
+        current_user.password_reset_version += 1
         await db.commit()
 
     async def verify_user_password(self, email: str, password: str, db: AsyncSession) -> bool:

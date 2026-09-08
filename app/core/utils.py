@@ -1,7 +1,12 @@
-import jwt
+import logging
 from datetime import UTC, datetime, timedelta
 
+import jwt
+from jwt import ExpiredSignatureError, InvalidTokenError
+
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class TokenUtils:
@@ -23,5 +28,8 @@ class TokenUtils:
                 settings.jwt_secret_key,
                 algorithms=[settings.jwt_algorithm],
             )
-        except jwt.InvalidTokenError:
+        except ExpiredSignatureError:
+            logger.warning("Password reset token has expired")
+        except InvalidTokenError:
+            logger.warning("Password reset token is invalid")
             return None

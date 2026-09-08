@@ -2,7 +2,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from pydantic import EmailStr, TypeAdapter
-from sqlalchemy import Boolean, Enum, String
+from sqlalchemy import Boolean, Enum, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.models.base import Base, TimestampMixin, uuid_pk_column
@@ -24,6 +24,12 @@ class User(TimestampMixin, Base):
     last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_reset_version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
     role: Mapped[UserRole] = mapped_column(
         Enum(
             UserRole,

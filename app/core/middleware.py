@@ -5,7 +5,6 @@ from fastapi import FastAPI
 from fastapi.requests import Request
 from fastapi.responses import Response
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # Security
-    jwt_secret_key: str = "change-me-change-me-change-me-123"
+    jwt_secret_key: str = Field(..., min_length=32)
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7

@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user
+from app.core.config import settings
+from app.core.exceptions import UserNotFoundError
 from app.db.session import get_db
 from app.models.users import User
 from app.schemas.auth import (
@@ -68,10 +70,18 @@ async def logout(
 async def reset_password(
     payload: PasswordResetRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> Response:
+) -> dict[str, str]:
     email = payload.email
-    token = await service.reset_password(email, db)
-    return {"reset_token": token}
+    try:
+        token = await service.reset_password(email, db)
+    except UserNotFoundError:
+        # Keep account existence private for public reset requests.
+        return {"message": "If the account exists, a reset link will be sent."}
+
+    if settings.debug:
+        return {"reset_token": token}
+
+    return {"message": "If the account exists, a reset link will be sent."}
 
 
 @router.post("/password-reset/confirm", status_code=status.HTTP_204_NO_CONTENT, summary="Confirm password reset with token")
